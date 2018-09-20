@@ -1,10 +1,10 @@
 /**
  * This is a model of a divider problem, where Participants are allowed to pick their favourite Things. These Things,
  * some of which may have a minimum or maximum number of Participants, should be divided among them, so that each
- * Participant is alotted a single Thing. Things may be mandatory, meaning that at least 1 Participant should be alotted
+ * Participant is allotted a single Thing. Things may be mandatory, meaning that at least 1 Participant should be allotted
  * the thing (this may be so if the Things are tasks). Things may also have a minimum and a maximum number of Participants.
  * This is a model of a fair system, where each Participant's happiness is maximized, and unhappiness, if unavoidable,
- * is randomly alotted.
+ * is randomly allotted.
  */
 vocabulary DividerVoc {
 
@@ -15,30 +15,30 @@ vocabulary DividerVoc {
 	ParticipantId(Participant) : Id
 	partial ParticipantName(Participant) : string
 
-	// a Thing to be alotted
+	// a Thing to be allotted
 	type Thing
 	ThingId(Thing) : Id
 	partial ThingName(Thing) : string
 	partial ThingDescription(Thing) : string
 
-	// whether the Thing is mandatory to be alotted
+	// whether the Thing is mandatory to be allotted
 	Mandatory(Thing)
 	// the maximum number of Participants
 	partial MaxNbParticipants(Thing) : nat
-	// the minimum number of Participants, if it is to be alotted
+	// the minimum number of Participants, if it is to be allotted
 	partial MinNbParticipants(Thing) : nat
 
 	type Score isa int
 
-	// a Participant's vote for a given Thing models how happy the Participant indicated he would be to be alotted the Thing
+	// a Participant's vote for a given Thing models how happy the Participant indicated he would be to be allotted the Thing
 	Voted(Participant, Thing, Score)
 	// a Participant is Active if he has brought out his vote
 	Active(Participant)
-	// a Participant's ImplicitScore for a given Thing models how happy the Participant would be to be alotted the Thing
+	// a Participant's ImplicitScore for a given Thing models how happy the Participant would be to be allotted the Thing
 	ParticipantScore(Participant, Thing, Score)
 
-	// the Thing alotted to a Participant
-	Alotted(Participant) : Thing
+	// the Thing allotted to a Participant
+	Allotted(Participant) : Thing
 
 } //DividerVoc
 
@@ -59,15 +59,15 @@ theory DividerTheory : DividerVoc {
 		! p [Participant] t [Thing] : ParticipantScore(p, t, MIN[:Score]) <- Active(p) & ! s [Score] : ~Voted(p, t, s).
 	}
 
-	// all Participants are alotted a single thing
-	! p [Participant] : ? t [Thing] : Alotted(p) = t.
+	// all Participants are allotted a single thing
+	! p [Participant] : ? t [Thing] : Allotted(p) = t.
 
-	// mandatory Things are alotted to at least one Participant
-	! t [Thing] : Mandatory(t) => ? p [Participant] : Alotted(p) = t.
+	// mandatory Things are allotted to at least one Participant
+	! t [Thing] : Mandatory(t) => ? p [Participant] : Allotted(p) = t.
 	// the maximum number of participants for a Thing is respected
-	! t [Thing] n [nat] : MaxNbParticipants(t) = n => #{p [Participant] : Alotted(p) = t} = n.
-	// if a Thing is alotted to any participant, the minimum number of participants is respected
-	! t [Thing] n [nat] : MinNbParticipants(t) = n => #{p [Participant] : Alotted(p) = t} >= n | ! p [Participant] : Alotted(p) ~= t.
+	! t [Thing] n [nat] : MaxNbParticipants(t) = n => #{p [Participant] : Allotted(p) = t} = n.
+	// if a Thing is allotted to any participant, the minimum number of participants is respected
+	! t [Thing] n [nat] : MinNbParticipants(t) = n => #{p [Participant] : Allotted(p) = t} >= n | ! p [Participant] : Alotted(p) ~= t.
 
 } //DividerTheory
 
@@ -80,3 +80,5 @@ structure exampleStruct : DividerVoc {
 	MaxNbParticipants = { T1 -> 4 ; T2 -> 2 }
 	MinNbParticipants = { }
 }
+
+// vim: set noexpandtab:
