@@ -33,7 +33,8 @@ vocabulary DividerVoc {
 	ParticipantScore(Participant, Thing, Score)
 
 	// the Thing allotted to a Participant
-	Allotted(Participant) : Thing
+	Allotted(Participant, Thing)
+	FinalScore(Participant, Score)
 
 } //DividerVoc
 
@@ -54,43 +55,48 @@ theory DividerTheory : DividerVoc {
 		! p [Participant] t [Thing] : ParticipantScore(p, t, MIN[:Score]) <- Active(p) & ! s [Score] : ~Voted(p, t, s).
 	}
 
+	// FinalScore
+	{
+		//TODO: edit when multiple Things can be allotted to one Participant
+		! p [Participant] s [Score] : FinalScore(p, s) <- ? t [Thing] : Allotted(p, t) & ParticipantScore(p, t, s).
+	}
+
+	//TODO: edit when multiple Things can be allotted to one Participant
 	// all Participants are allotted a single thing
-	! p [Participant] : ? t [Thing] : Allotted(p) = t.
+	! p [Participant] : ?1 t [Thing] : Allotted(p, t).
 
 	// mandatory Things are allotted to at least one Participant
-	! t [Thing] : Mandatory(t) => ? p [Participant] : Allotted(p) = t.
+	! t [Thing] : Mandatory(t) => ? p [Participant] : Allotted(p, t).
 	// the maximum number of participants for a Thing is respected
-	//! t [Thing] : #{p [Participant] : Allotted(p) = t} =< MaxNbParticipants(t).
-	! t [Thing] n [nat] : MaxNbParticipants(t, n) => #{p [Participant] : Allotted(p) = t} =< n.
+	! t [Thing] n [nat] : MaxNbParticipants(t, n) => #{ p [Participant] : Allotted(p, t) } =< n.
 	// if a Thing is allotted to any participant, the minimum number of participants is respected
-	! t [Thing] n [nat] : MinNbParticipants(t, n) => #{p [Participant] : Allotted(p) = t} >= n | ! p [Participant] : Allotted(p) ~= t.
+	! t [Thing] n [nat] : MinNbParticipants(t, n) => #{ p [Participant] : Allotted(p, t) } >= n | ! p [Participant] : ~Allotted(p, t).
 
 } //DividerTheory
 
 term LowestScore : DividerVoc {
-	min{p [Participant] t [Thing] s [Score] : Allotted(p) = t & ParticipantScore(p, t, s) : s }
+	min{ p [Participant] s [Score] : FinalScore(p, s) : s }
 } //LowestScore
 
 structure exampleStruct : DividerVoc {
-	Score = { 1..100 }
+	Score = { 0..100 }
 	Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
 	Thing = { T1 ; T2 }
 	Voted = { (P1, T1, 10) ; (P1, T2, 90) ; (P2, T1, 60) ; (P2, T2, 40) ; (P3, T2, 100) ; (P4, T1, 20) ; (P4, T2, 80) }
-	Mandatory = { T1 }
-	MaxNbParticipants = { (T1, 4) ; (T2, 2) }
-	//MaxNbParticipants = { }
-	//MinNbParticipants = { }
-	MinNbParticipants = { (T1, 0) ; (T2, 0) }
+	Mandatory = { }
+	MaxNbParticipants = { }
+	MinNbParticipants = { }
 } // exampleStruct
 
 procedure main() {
 	// This option most of the time gives a speed up.
 	stdoptions.splitdefs = false
-	local sol = onemodel(DividerTheory, exampleStruct)
-	//local sol = maximize(DividerTheory, exampleStruct, LowestScore)
-	if sol ~= nil then
-		print(sol)
-		print("Good!")
+	//local models, success, lowest = minimize(DividerTheory, exampleStruct, LowestScore)
+	local models, success, lowest = maximize(DividerTheory, exampleStruct, LowestScore)
+	if success ~= nil then
+		print("Success!")
+		print(lowest)
+		print(models[1])
 	else
 		print("Your theory is unsatisfiable!")
 	end
