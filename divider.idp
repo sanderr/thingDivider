@@ -67,11 +67,16 @@ theory DividerTheory : DividerVoc {
 	// the maximum number of participants for a Thing is respected
 	! t [Thing] n [nat] : MaxNbParticipants(t) = n => #{p [Participant] : Allotted(p) = t} = n.
 	// if a Thing is allotted to any participant, the minimum number of participants is respected
-	! t [Thing] n [nat] : MinNbParticipants(t) = n => #{p [Participant] : Allotted(p) = t} >= n | ! p [Participant] : Alotted(p) ~= t.
+	! t [Thing] n [nat] : MinNbParticipants(t) = n => #{p [Participant] : Allotted(p) = t} >= n | ! p [Participant] : Allotted(p) ~= t.
 
 } //DividerTheory
 
+term LowestScore : DividerVoc {
+	min{p [Participant] t [Thing] s [Score] : Allotted(p) = t & ParticipantScore(p, t, s) : s }
+} //LowestScore
+
 structure exampleStruct : DividerVoc {
+	Id = { 1..10 }
 	Score = { 1..100 }
 	Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
 	Thing = { T1 ; T2 }
@@ -79,6 +84,19 @@ structure exampleStruct : DividerVoc {
 	Mandatory = { }
 	MaxNbParticipants = { T1 -> 4 ; T2 -> 2 }
 	MinNbParticipants = { }
-}
+} // exampleStruct
+
+procedure main() {
+	// This option most of the time gives a speed up.
+	stdoptions.splitdefs = false
+	local sol = onemodel(DividerTheory, exampleStruct)
+	//local sol = maximize(DividerTheory, exampleStruct, LowestScore)
+	if sol ~= nil then
+		print("Good!")
+	else
+		print("Your theory is unsatisfiable!")
+	end
+} //main()
+
 
 // vim: set noexpandtab:
