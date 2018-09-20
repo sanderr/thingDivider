@@ -16,14 +16,14 @@ vocabulary DividerVoc {
 	type Thing
 	// Id, Name and Description predicates can be added here
 
+	type Score isa int
+
 	// whether the Thing is mandatory to be allotted
 	Mandatory(Thing)
 	// the maximum number of Participants
 	MaxNbParticipants(Thing, nat)
 	// the minimum number of Participants, if it is to be allotted
 	MinNbParticipants(Thing, nat)
-
-	type Score isa int
 
 	// a Participant's vote for a given Thing models how happy the Participant indicated he would be to be allotted the Thing
 	Voted(Participant, Thing, Score)
@@ -75,24 +75,23 @@ theory DividerTheory : DividerVoc {
 } //DividerTheory
 
 term LowestScore : DividerVoc {
-	min{ p [Participant] s [Score] : FinalScore(p, s) : s }
+	max{ s [Score] : (? p [Participant] : FinalScore(p, s)) : -s }
 } //LowestScore
 
 structure exampleStruct : DividerVoc {
-	Score = { 0..100 }
 	Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
 	Thing = { T1 ; T2 }
-	Voted = { (P1, T1, 10) ; (P1, T2, 90) ; (P2, T1, 60) ; (P2, T2, 40) ; (P3, T2, 100) ; (P4, T1, 20) ; (P4, T2, 80) }
+	Score = { 0..100 }
 	Mandatory = { }
 	MaxNbParticipants = { }
 	MinNbParticipants = { }
+	Voted = { (P1, T1, 10) ; (P1, T2, 90) ; (P2, T1, 60) ; (P2, T2, 40) ; (P3, T2, 100) ; (P4, T1, 20) ; (P4, T2, 80) }
 } // exampleStruct
 
 procedure main() {
-	// This option most of the time gives a speed up.
+	// This option is supposed to give a speed up most of the time. I could not find it in the manual...
 	stdoptions.splitdefs = false
-	//local models, success, lowest = minimize(DividerTheory, exampleStruct, LowestScore)
-	local models, success, lowest = maximize(DividerTheory, exampleStruct, LowestScore)
+	local models, success, lowest = minimize(DividerTheory, exampleStruct, LowestScore)
 	if success ~= nil then
 		print("Success!")
 		print(lowest)
