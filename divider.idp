@@ -6,6 +6,7 @@
  * This is a modeling of a fair system, where each Participant's happiness is maximized, and unhappiness, if unavoidable,
  * is randomly allotted.
  */
+
 vocabulary DividerVoc {
 
 	// a Participant to the division
@@ -74,9 +75,11 @@ theory DividerTheory : DividerVoc {
 
 } //DividerTheory
 
-term LowestScore : DividerVoc {
-	max{ s [Score] : (? p [Participant] : FinalScore(p, s)) : -s }
-} //LowestScore
+term LowestScoreNegated : DividerVoc {
+	max{ p [Participant] s [Score] : FinalScore(p, s) : -s }
+	//TODO: above is more readable, but is below more efficient?
+	//max{ s [Score] : (? p [Participant] : FinalScore(p, s)) : -s }
+} //LowestScoreNegated
 
 structure exampleStruct : DividerVoc {
 	Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
@@ -91,7 +94,7 @@ structure exampleStruct : DividerVoc {
 procedure main() {
 	// This option is supposed to give a speed up most of the time. I could not find it in the manual...
 	stdoptions.splitdefs = false
-	local models, success, lowest = minimize(DividerTheory, exampleStruct, LowestScore)
+	local models, success, lowest = minimize(DividerTheory, exampleStruct, LowestScoreNegated)
 	if success ~= nil then
 		print("Success!")
 		print(lowest)
