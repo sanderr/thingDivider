@@ -8,25 +8,20 @@
  */
 vocabulary DividerVoc {
 
-	type Id isa nat
-
 	// a Participant to the division
 	type Participant
-	ParticipantId(Participant) : Id
-	partial ParticipantName(Participant) : string
+	// Id and Name predicates can be added here
 
 	// a Thing to be allotted
 	type Thing
-	ThingId(Thing) : Id
-	partial ThingName(Thing) : string
-	partial ThingDescription(Thing) : string
+	// Id, Name and Description predicates can be added here
 
 	// whether the Thing is mandatory to be allotted
 	Mandatory(Thing)
 	// the maximum number of Participants
-	partial MaxNbParticipants(Thing) : nat
+	MaxNbParticipants(Thing, nat)
 	// the minimum number of Participants, if it is to be allotted
-	partial MinNbParticipants(Thing) : nat
+	MinNbParticipants(Thing, nat)
 
 	type Score isa int
 
@@ -65,9 +60,10 @@ theory DividerTheory : DividerVoc {
 	// mandatory Things are allotted to at least one Participant
 	! t [Thing] : Mandatory(t) => ? p [Participant] : Allotted(p) = t.
 	// the maximum number of participants for a Thing is respected
-	! t [Thing] n [nat] : MaxNbParticipants(t) = n => #{p [Participant] : Allotted(p) = t} = n.
+	//! t [Thing] : #{p [Participant] : Allotted(p) = t} =< MaxNbParticipants(t).
+	! t [Thing] n [nat] : MaxNbParticipants(t, n) => #{p [Participant] : Allotted(p) = t} =< n.
 	// if a Thing is allotted to any participant, the minimum number of participants is respected
-	! t [Thing] n [nat] : MinNbParticipants(t) = n => #{p [Participant] : Allotted(p) = t} >= n | ! p [Participant] : Allotted(p) ~= t.
+	! t [Thing] n [nat] : MinNbParticipants(t, n) => #{p [Participant] : Allotted(p) = t} >= n | ! p [Participant] : Allotted(p) ~= t.
 
 } //DividerTheory
 
@@ -76,14 +72,15 @@ term LowestScore : DividerVoc {
 } //LowestScore
 
 structure exampleStruct : DividerVoc {
-	Id = { 1..10 }
 	Score = { 1..100 }
 	Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
 	Thing = { T1 ; T2 }
 	Voted = { (P1, T1, 10) ; (P1, T2, 90) ; (P2, T1, 60) ; (P2, T2, 40) ; (P3, T2, 100) ; (P4, T1, 20) ; (P4, T2, 80) }
-	Mandatory = { }
-	MaxNbParticipants = { T1 -> 4 ; T2 -> 2 }
-	MinNbParticipants = { }
+	Mandatory = { T1 }
+	MaxNbParticipants = { (T1, 4) ; (T2, 2) }
+	//MaxNbParticipants = { }
+	//MinNbParticipants = { }
+	MinNbParticipants = { (T1, 0) ; (T2, 0) }
 } // exampleStruct
 
 procedure main() {
@@ -92,6 +89,7 @@ procedure main() {
 	local sol = onemodel(DividerTheory, exampleStruct)
 	//local sol = maximize(DividerTheory, exampleStruct, LowestScore)
 	if sol ~= nil then
+		print(sol)
 		print("Good!")
 	else
 		print("Your theory is unsatisfiable!")
