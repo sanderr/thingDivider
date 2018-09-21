@@ -1,5 +1,5 @@
 /**
- * This is a modeling of a divider problem, where Participants are allowed to pick their favourite Things. These Things,
+ * This is a modeling of a Thing Divider problem, where Participants are allowed to pick their favourite Things. These Things,
  * some of which may have a minimum or maximum number of Participants, should be divided among them, so that each
  * Participant is allotted a single Thing. Things may be mandatory, meaning that at least 1 Participant should be allotted
  * the thing (this may be so if the Things are tasks). Things may also have a minimum and a maximum number of Participants.
@@ -7,7 +7,7 @@
  * is randomly allotted.
  */
 
-vocabulary DividerVoc {
+vocabulary ThingDividerVoc {
 
 	// a Participant to the division
 	type Participant
@@ -37,9 +37,9 @@ vocabulary DividerVoc {
 	Allotted(Participant, Thing)
 	FinalScore(Participant, Score)
 
-} //DividerVoc
+} //ThingDividerVoc
 
-theory DividerTheory : DividerVoc {
+theory ThingDividerTheory : ThingDividerVoc {
 
 	// Active
 	{
@@ -73,16 +73,16 @@ theory DividerTheory : DividerVoc {
 	// if a Thing is allotted to any participant, the minimum number of participants is respected
 	! t [Thing] n [nat] : MinNbParticipants(t, n) => #{ p [Participant] : Allotted(p, t) } >= n | ! p [Participant] : ~Allotted(p, t).
 
-} //DividerTheory
+} //ThingDividerTheory
 
-term LowestScoreNegated : DividerVoc {
+term LowestScoreNegated : ThingDividerVoc {
 	//TODO: minimizing the max of a negated set is not very clean, should not be necessary
 	max{ s [Score] : (? p [Participant] : FinalScore(p, s)) : -s }
 	//TODO: below is more readable, but is above more efficient?
 	//max{ p [Participant] s [Score] : FinalScore(p, s) : -s }
 } //LowestScoreNegated
 
-structure ExampleStruct : DividerVoc {
+structure ExampleStruct : ThingDividerVoc {
 	Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
 	Thing = { T1 ; T2 }
 	Score = { 0..100 }
@@ -95,7 +95,7 @@ structure ExampleStruct : DividerVoc {
 procedure main() {
 	// TODO: This option is supposed to give a speed up most of the time. I could not find it in the manual...
 	stdoptions.splitdefs = false
-	local models, success, lowest = minimize(DividerTheory, ExampleStruct, LowestScoreNegated)
+	local models, success, lowest = minimize(ThingDividerTheory, ExampleStruct, LowestScoreNegated)
 	if success == nil then
 		print("Your theory is unsatisfiable!")
 	else
