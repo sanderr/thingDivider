@@ -76,10 +76,7 @@ theory ThingDividerTheory : ThingDividerVoc {
 } //ThingDividerTheory
 
 term LowestScoreNegated : ThingDividerVoc {
-	//TODO: minimizing the max of a negated set is not very clean, should not be necessary
-	max{ s [Score] : (? p [Participant] : FinalScore(p, s)) : -s }
-	//TODO: below is more readable, but is above more efficient?
-	//max{ p [Participant] s [Score] : FinalScore(p, s) : -s }
+	max{ p [Participant] s [Score] : FinalScore(p, s) : -s }
 } //LowestScoreNegated
 
 structure ExampleStruct : ThingDividerVoc {
@@ -93,8 +90,6 @@ structure ExampleStruct : ThingDividerVoc {
 } //ExampleStruct
 
 procedure main() {
-	// TODO: This option is supposed to give a speed up most of the time. I could not find it in the manual...
-	stdoptions.splitdefs = false
 	local models, success, lowest = minimize(ThingDividerTheory, ExampleStruct, LowestScoreNegated)
 	if success == nil then
 		print("Your theory is unsatisfiable!")
