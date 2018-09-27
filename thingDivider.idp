@@ -43,10 +43,6 @@ vocabulary ThingDividerVoc {
 	// whether the initial allotment should be the final allotment for a participant, this is required to be able to iteratively find the best model
 	AllottedInitFinal(Participant)
 
-	//TODO: for testing purposes only. Remove!
-	//Test(int)
-
-
 } //ThingDividerVoc
 
 theory ThingDividerTheory : ThingDividerVoc {
@@ -212,6 +208,12 @@ procedure intersect(models, qry) {
 	local intersection = nil
 	local function intersectTwo(setOne, setTwo)
 		local result = {};
+		if setOne == nil then
+			return setTwo;
+		end
+		if setTwo == nil then
+			return setOne;
+		end
 		for value,_ in pairs(setOne) do
 			if setTwo[value] ~= nil then
 				result[value] = true
@@ -226,11 +228,7 @@ procedure intersect(models, qry) {
 		for i, tuple in pairs(totable(queryResult)) do
 			set[tuple[1]] = true;
 		end
-		if intersection == nil then
-			intersection = set;
-		else
-			intersection = intersectTwo(intersection, set);
-		end
+		intersection = intersectTwo(intersection, set);
 	end
 	local result = {};
 	// transform set to array
