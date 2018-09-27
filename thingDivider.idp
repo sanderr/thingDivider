@@ -6,6 +6,7 @@
  * This is a modeling of a fair system, where each Participant's happiness is maximized, and unhappiness, if unavoidable,
  * is randomly allotted.
  */
+include <table_utils>
 
 vocabulary ThingDividerVoc {
 
@@ -35,7 +36,16 @@ vocabulary ThingDividerVoc {
 
 	// the Thing allotted to a Participant
 	Allotted(Participant, Thing)
-	FinalScore(Participant, Score)
+	FinalScore(Participant) : Score
+
+	// initial allotment
+	AllottedInit(Participant, Thing)
+	// whether the initial allotment should be the final allotment for a participant, this is required to be able to iteratively find the best model
+	AllottedInitFinal(Participant)
+
+	//TODO: for testing purposes only. Remove!
+	//Test(int)
+
 
 } //ThingDividerVoc
 
@@ -59,8 +69,11 @@ theory ThingDividerTheory : ThingDividerVoc {
 	// FinalScore
 	{
 		//TODO: update when multiple Things can be allotted to one Participant
-		! p [Participant] s [Score] : FinalScore(p, s) <- ? t [Thing] : Allotted(p, t) & ParticipantScore(p, t, s).
+		! p [Participant] s [Score] : FinalScore(p) = s <- ? t [Thing] : Allotted(p, t) & ParticipantScore(p, t, s).
 	}
+
+	! p [Participant] t [Thing] : AllottedInit(p, t) => Allotted(p, t).
+	! p [Participant] t [Thing] : AllottedInitFinal(p) & ~AllottedInit(p, t) => ~Allotted(p, t).
 
 	//TODO: update when multiple Things can be allotted to one Participant
 	// all Participants are allotted a single thing
@@ -75,30 +88,156 @@ theory ThingDividerTheory : ThingDividerVoc {
 
 } //ThingDividerTheory
 
-term LowestScoreNegated : ThingDividerVoc {
-	max{ p [Participant] s [Score] : FinalScore(p, s) : -s }
-} //LowestScoreNegated
+term LowestNonFinalScore : ThingDividerVoc {
+	min{ p [Participant] s [Score] : FinalScore(p) = s & ~AllottedInitFinal(p) : s }
+} //LowestNonFinalScore
+
+query LowestNonFinalScoreParticipants : ThingDividerVoc {
+	{ p [Participant] : ~AllottedInitFinal(p) & FinalScore(p) = min{ pp [Participant] s [Score] : FinalScore(pp) = s & ~AllottedInitFinal(pp) : s } }
+}
 
 structure ExampleStruct : ThingDividerVoc {
-	Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
-	Thing = { T1 ; T2 }
+	//Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
+	Participant = { P1 ; P2 }
+	Thing = { T1 ; T2 ; T3 }
 	Score = { 0..100 }
 	Mandatory = { }
-	MaxNbParticipants = { }
+	//MaxNbParticipants = { }
+	MaxNbParticipants = { (T1, 0) }
 	MinNbParticipants = { }
-	Voted = { (P1, T1, 10) ; (P1, T2, 90) ; (P2, T1, 60) ; (P2, T2, 40) ; (P3, T2, 100) ; (P4, T1, 20) ; (P4, T2, 80) }
+	//Voted = { (P1, T1, 10) ; (P1, T2, 90) ; (P2, T1, 60) ; (P2, T2, 40) ; (P3, T2, 100) ; (P4, T1, 20) ; (P4, T2, 80) }
+	Voted = { (P1, T1, 90) ; (P1, T2, 10) ; (P2, T1, 60) ; (P2, T2, 20) ; (P2, T3, 20) }
+	AllottedInit = { }
+	AllottedInitFinal = { }
 } //ExampleStruct
 
+
 procedure main() {
-	local models, success, lowest = minimize(ThingDividerTheory, ExampleStruct, LowestScoreNegated)
-	if success == nil then
-		print("Your theory is unsatisfiable!")
-	else
-		print("Success!")
-		print(lowest)
-		printmodels(models)
+	local bestModel = findBestModelIteratively(ExampleStruct);
+	if bestModel == nil then
+		print("Your theory is insatisfiable!");
+		return;
 	end
+	print("best model");
+	print(bestModel);
 } //main()
 
+//TODO: more abstraction for predicate tables throughout code
+
+procedure findBestModelIteratively(struct) {
+	local structure = clone(struct);
+	local theory = ThingDividerTheory;
+	local term = LowestNonFinalScore;
+	//TODO: using IDP's built-in maximize or minimize would be better, but it seems to only return 1 model
+	local maxModels, maxValue = maximizeModels(allmodels(theory, structure), term);
+	if table.getn(maxModels) == 0 then
+		return nil;
+	elseif table.getn(maxModels) == 1 then
+		return maxModels[1];
+	end
+	// TODO: test if this makes things better or worse
+	generalizeModels(structure, maxModels, "Allotted");
+	local maximizedParticipants = intersect(maxModels, LowestNonFinalScoreParticipants);
+	if table.getn(maximizedParticipants) == 0 then
+		//TODO: somehow detect disjunct sets... This will not be easy
+	else
+		local initPredicateInterpretation = structure[getvocabulary(structure).AllottedInit]
+		local initFinalPredicateInterpretation = structure[getvocabulary(structure).AllottedInitFinal]
+		for i,participant in pairs(maximizedParticipants) do
+			local modelAllottedCt = maxModels[1][getvocabulary(structure).Allotted].ct
+			local thing = nil;
+			for j, tuple in pairs(totable(modelAllottedCt)) do
+				if tuple[1] == participant then
+					thing = tuple[2];
+					break;
+				end
+			end
+			if thing == nil then
+				print("Something went wrong!");
+			end
+			maketrue(initPredicateInterpretation, { participant, thing });
+			maketrue(initFinalPredicateInterpretation, { participant });
+		end
+	end
+	clean(structure);
+	return findBestModelIteratively(structure);
+}
+
+
+procedure makeUnknown(predicateInterpretation, predicateTable) {
+	for i, tuple in pairs(totable(predicateTable)) do
+		makeunknown(predicateInterpretation, tuple)
+	end
+}
+
+procedure makeFalse(predicateInterpretation, predicateTable) {
+	for i, tuple in pairs(totable(predicateTable)) do
+		makefalse(predicateInterpretation, tuple)
+	end
+}
+
+procedure makeAllFalse(predicateInterpretation) {
+	makeFalse(predicateInterpretation, totable(predicateInterpretation.pt));
+}
+
+
+procedure generalizeModels(structure, models, predicateName) {
+	// clear Allotted table and add only tuples present in one of the models as possibly true
+	local predicateInterpretation = structure[getvocabulary(structure)[predicateName]]
+	makeAllFalse(predicateInterpretation)
+	for i, model in pairs(models) do
+		makeUnknown(predicateInterpretation, model[getvocabulary(structure)[predicateName]].ct)
+	end
+}
+
+procedure maximizeModels(models, term) {
+	if table.getn(models) == 1 then
+		return models;
+	end
+	local maxValue = 0;
+	local maxModels = {};
+	for i,model in pairs(models) do
+		local val = value(term, model);
+		if (val > maxValue) then
+			maxModels = { model };
+			maxValue = val;
+		elseif (val == maxValue) then
+			table.insert(maxModels, model);
+		end
+	end
+	return maxModels, maxValue;
+}
+
+procedure intersect(models, qry) {
+	local intersection = nil
+	local function intersectTwo(setOne, setTwo)
+		local result = {};
+		for value,_ in pairs(setOne) do
+			if setTwo[value] ~= nil then
+				result[value] = true
+			end
+		end
+		return result;
+	end
+	for i, model in pairs(models) do
+		local queryResult = query(qry, model);
+		// transform to table with values as keys
+		local set = {};
+		for i, tuple in pairs(totable(queryResult)) do
+			set[tuple[1]] = true;
+		end
+		if intersection == nil then
+			intersection = set;
+		else
+			intersection = intersectTwo(intersection, set);
+		end
+	end
+	local result = {};
+	// transform set to array
+	for value,_ in pairs(intersection) do
+		table.insert(result, value);
+	end
+	return result;
+}
 
 // vim: set noexpandtab:
