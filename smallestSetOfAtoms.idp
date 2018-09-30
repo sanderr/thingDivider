@@ -1,0 +1,46 @@
+/**
+ * This is a modelling of a problem where a smallest set of true atoms is to be found, to make a conjunction of disjunctions true.
+ */
+
+include "modelHelpers.idp"
+
+vocabulary AtomVoc {
+
+	type Atom
+	type Set
+
+	// a Disjunction of Atoms
+	Disjunction(Set, Atom)
+
+	// a conjunct set of atoms, that makes all Conjunctions true
+	SufficientSet(Atom)
+
+}
+
+theory AtomTheory : AtomVoc {
+
+	! s [Set] : ? a [Atom] : Disjunction(s, a) & SufficientSet(a).
+
+}
+
+term SufficientSetSize : AtomVoc {
+	#{ a [Atom] : SufficientSet(a) }
+}
+
+structure AtomExampleStruct : AtomVoc {
+	Atom = { a ; b ; c }
+	Set = { S1 ; S2 ; S3 ; S4 ; S5 ; S6 }
+	// disjunctions a, ab, ac, abc, b, bc
+	Disjunction = { (S1, a) ; (S2, a) ; (S2, b) ; (S3, a) ; (S3, c) ; (S4, a) ; (S4, b) ; (S4, c) ; (S5, b) ; (S6, b) ; (S6, c) }
+}
+
+procedure findSmallestSetForExampleStruct() {
+	local minModels, minValue = minimizeModels(allmodels(AtomTheory, AtomExampleStruct), SufficientSetSize);
+	if table.getn(minModels) == 0 then
+		print("Your theory is insatisfiable!");
+		return;
+	elseif table.getn(minModels) == 1 then
+		print("best models");
+		printmodels(minModels);
+	end
+}

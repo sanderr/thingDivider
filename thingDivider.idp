@@ -6,7 +6,10 @@
  * This is a modeling of a fair system, where each Participant's happiness is maximized, and unhappiness, if unavoidable,
  * is randomly allotted.
  */
+
 include <table_utils>
+include "modelHelpers.idp"
+include "smallestSetOfAtoms.idp"
 
 vocabulary ThingDividerVoc {
 
@@ -92,7 +95,7 @@ query LowestNonFinalScoreParticipants : ThingDividerVoc {
 	{ p [Participant] : ~AllottedInitFinal(p) & FinalScore(p) = min{ pp [Participant] s [Score] : FinalScore(pp) = s & ~AllottedInitFinal(pp) : s } }
 }
 
-structure ExampleStruct : ThingDividerVoc {
+structure ThingDividerExampleStruct : ThingDividerVoc {
 	//Participant = { P1 ; P2 ; P3 ; P4 ; P5 }
 	Participant = { P1 ; P2 }
 	Thing = { T1 ; T2 ; T3 }
@@ -105,11 +108,11 @@ structure ExampleStruct : ThingDividerVoc {
 	Voted = { (P1, T1, 90) ; (P1, T2, 10) ; (P2, T1, 60) ; (P2, T2, 20) ; (P2, T3, 20) }
 	AllottedInit = { }
 	AllottedInitFinal = { }
-} //ExampleStruct
+} //ThingDividerExampleStruct
 
 
 procedure main() {
-	local bestModel = findBestModelIteratively(ExampleStruct);
+	local bestModel = findBestModelIteratively(ThingDividerExampleStruct);
 	if bestModel == nil then
 		print("Your theory is insatisfiable!");
 		return;
@@ -157,85 +160,6 @@ procedure findBestModelIteratively(struct) {
 	end
 	clean(structure);
 	return findBestModelIteratively(structure);
-}
-
-
-procedure makeUnknown(predicateInterpretation, predicateTable) {
-	for i, tuple in pairs(totable(predicateTable)) do
-		makeunknown(predicateInterpretation, tuple)
-	end
-}
-
-procedure makeFalse(predicateInterpretation, predicateTable) {
-	for i, tuple in pairs(totable(predicateTable)) do
-		makefalse(predicateInterpretation, tuple)
-	end
-}
-
-procedure makeAllFalse(predicateInterpretation) {
-	makeFalse(predicateInterpretation, totable(predicateInterpretation.pt));
-}
-
-
-procedure generalizeModels(structure, models, predicateName) {
-	// clear Allotted table and add only tuples present in one of the models as possibly true
-	local predicateInterpretation = structure[getvocabulary(structure)[predicateName]]
-	makeAllFalse(predicateInterpretation)
-	for i, model in pairs(models) do
-		makeUnknown(predicateInterpretation, model[getvocabulary(structure)[predicateName]].ct)
-	end
-}
-
-procedure maximizeModels(models, term) {
-	if table.getn(models) == 1 then
-		return models;
-	end
-	local maxValue = 0;
-	local maxModels = {};
-	for i,model in pairs(models) do
-		local val = value(term, model);
-		if (val > maxValue) then
-			maxModels = { model };
-			maxValue = val;
-		elseif (val == maxValue) then
-			table.insert(maxModels, model);
-		end
-	end
-	return maxModels, maxValue;
-}
-
-procedure intersect(models, qry) {
-	local intersection = nil
-	local function intersectTwo(setOne, setTwo)
-		local result = {};
-		if setOne == nil then
-			return setTwo;
-		end
-		if setTwo == nil then
-			return setOne;
-		end
-		for value,_ in pairs(setOne) do
-			if setTwo[value] ~= nil then
-				result[value] = true
-			end
-		end
-		return result;
-	end
-	for i, model in pairs(models) do
-		local queryResult = query(qry, model);
-		// transform to table with values as keys
-		local set = {};
-		for i, tuple in pairs(totable(queryResult)) do
-			set[tuple[1]] = true;
-		end
-		intersection = intersectTwo(intersection, set);
-	end
-	local result = {};
-	// transform set to array
-	for value,_ in pairs(intersection) do
-		table.insert(result, value);
-	end
-	return result;
 }
 
 // vim: set noexpandtab:

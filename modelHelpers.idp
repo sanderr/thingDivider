@@ -1,0 +1,86 @@
+include <table_utils>
+
+procedure extrimizeModels(models, term, compare) {
+	if table.getn(models) == 1 then
+		return models;
+	end
+	local xValue = nil;
+	local xModels = {};
+	for i,model in pairs(models) do
+		local val = value(term, model);
+		if xValue == nil or compare(val, xValue) then
+			xModels = { model };
+			xValue = val;
+		elseif val == xValue then
+			table.insert(xModels, model);
+		end
+	end
+	return xModels, xValue;
+}
+
+procedure maximizeModels(models, term) {
+	return extrimizeModels(models, term, function(a, b) return a > b end);
+}
+procedure minimizeModels(models, term) {
+	return extrimizeModels(models, term, function(a, b) return a < b end);
+}
+
+procedure intersect(models, qry) {
+	local intersection = nil
+	local function intersectTwo(setOne, setTwo)
+		local result = {};
+		if setOne == nil then
+			return setTwo;
+		end
+		if setTwo == nil then
+			return setOne;
+		end
+		for value,_ in pairs(setOne) do
+			if setTwo[value] ~= nil then
+				result[value] = true
+			end
+		end
+		return result;
+	end
+	for i, model in pairs(models) do
+		local queryResult = query(qry, model);
+		// transform to table with values as keys
+		local set = {};
+		for i, tuple in pairs(totable(queryResult)) do
+			set[tuple[1]] = true;
+		end
+		intersection = intersectTwo(intersection, set);
+	end
+	local result = {};
+	// transform set to array
+	for value,_ in pairs(intersection) do
+		table.insert(result, value);
+	end
+	return result;
+}
+
+procedure makeUnknown(predicateInterpretation, predicateTable) {
+	for i, tuple in pairs(totable(predicateTable)) do
+		makeunknown(predicateInterpretation, tuple)
+	end
+}
+
+procedure makeFalse(predicateInterpretation, predicateTable) {
+	for i, tuple in pairs(totable(predicateTable)) do
+		makefalse(predicateInterpretation, tuple)
+	end
+}
+
+procedure makeAllFalse(predicateInterpretation) {
+	makeFalse(predicateInterpretation, totable(predicateInterpretation.pt));
+}
+
+
+procedure generalizeModels(structure, models, predicateName) {
+	// clear Allotted table and add only tuples present in one of the models as possibly true
+	local predicateInterpretation = structure[getvocabulary(structure)[predicateName]]
+	makeAllFalse(predicateInterpretation)
+	for i, model in pairs(models) do
+		makeUnknown(predicateInterpretation, model[getvocabulary(structure)[predicateName]].ct)
+	end
+}
