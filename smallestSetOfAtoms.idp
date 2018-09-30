@@ -3,6 +3,7 @@
  */
 
 include "modelHelpers.idp"
+include "util.idp"
 
 vocabulary AtomVoc {
 
@@ -32,6 +33,52 @@ structure AtomExampleStruct : AtomVoc {
 	Set = { S1 ; S2 ; S3 ; S4 ; S5 ; S6 }
 	// disjunctions a, ab, ac, abc, b, bc
 	Disjunction = { (S1, a) ; (S2, a) ; (S2, b) ; (S3, a) ; (S3, c) ; (S4, a) ; (S4, b) ; (S4, c) ; (S5, b) ; (S6, b) ; (S6, c) }
+}
+
+procedure getSmallestSetOfAtomsByQuery(models, qry) {
+	local atomStruct = newstructure(AtomVoc, "atomStruct");
+	local domain = {};
+	local disjunctions = {};
+	for i, model in pairs(models) do
+		local queryResult = query(qry, model);
+		// transform to table with values as keys
+		local atoms = {};
+		for i, tuple in pairs(totable(queryResult)) do
+			local atom = tuple[1];
+			domain[atom] = true;
+			table.insert(atoms, atom);
+		end
+		table.insert(disjunctions, atoms);
+	end
+	local dom = {};
+	// transform set to array
+	for value,_ in pairs(domain) do
+		table.insert(dom, value);
+	end
+	setDomain(atomStruct, "Atom", dom);
+	local function setFromKey(key)
+		return "AtomS_" .. tostring(key);
+	end
+	local setDom = {};
+	for key,disj in pairs(disjunctions) do
+		table.insert(setDom, setFromKey(key));
+	end
+	setDomain(atomStruct, "Set", setDom);
+	for key,disj in pairs(disjunctions) do
+		for _,atom in pairs(disj) do
+			maketrue(atomStruct[getvocabulary(atomStruct).Disjunction], { setFromKey(key), atom });
+		end
+	end
+	local minModels = minimizeModels(allmodels(AtomTheory, atomStruct), SufficientSetSize);
+	local model = getRandomElement(minModels);
+	if model == nil then
+		return nil
+	end
+	local result = {};
+	for _,tuple in pairs(totable(model[getvocabulary(model).SufficientSet].ct)) do
+		table.insert(result, tuple[1]);
+	end
+	return result;
 }
 
 procedure findSmallestSetForExampleStruct() {

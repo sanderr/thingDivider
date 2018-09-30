@@ -1,0 +1,7 @@
+procedure getRandomElement(tab) {
+	local keys = {};
+	for key,_ in pairs(tab) do
+		table.insert(keys, key);
+	end
+	return tab[keys[math.random(1, table.getn(keys))]];
+}

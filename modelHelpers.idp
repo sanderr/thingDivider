@@ -25,6 +25,16 @@ procedure minimizeModels(models, term) {
 	return extrimizeModels(models, term, function(a, b) return a < b end);
 }
 
+procedure generalizeModels(structure, models, predicateName) {
+	// clear Allotted table and add only tuples present in one of the models as possibly true
+	local predicateInterpretation = structure[getvocabulary(structure)[predicateName]]
+	makeAllFalse(predicateInterpretation)
+	for i, model in pairs(models) do
+		makeUnknown(predicateInterpretation, model[getvocabulary(structure)[predicateName]].ct)
+	end
+}
+
+//TODO: deprecate. This functionality is now provided by smallestSetOfAtoms.getSmallestSetOfAtomsByQuery. Test whether trying intersect first is more efficient, but I think not.
 procedure intersect(models, qry) {
 	local intersection = nil
 	local function intersectTwo(setOne, setTwo)
@@ -75,12 +85,6 @@ procedure makeAllFalse(predicateInterpretation) {
 	makeFalse(predicateInterpretation, totable(predicateInterpretation.pt));
 }
 
-
-procedure generalizeModels(structure, models, predicateName) {
-	// clear Allotted table and add only tuples present in one of the models as possibly true
-	local predicateInterpretation = structure[getvocabulary(structure)[predicateName]]
-	makeAllFalse(predicateInterpretation)
-	for i, model in pairs(models) do
-		makeUnknown(predicateInterpretation, model[getvocabulary(structure)[predicateName]].ct)
-	end
+procedure setDomain(structure, typeName, domain) {
+	structure[getvocabulary(structure)[typeName].type] = domain;
 }

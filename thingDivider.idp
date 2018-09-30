@@ -10,6 +10,7 @@
 include <table_utils>
 include "modelHelpers.idp"
 include "smallestSetOfAtoms.idp"
+include "util.idp"
 
 vocabulary ThingDividerVoc {
 
@@ -121,7 +122,7 @@ procedure main() {
 	print(bestModel);
 } //main()
 
-//TODO: more abstraction for predicate tables throughout code
+//TODO: more abstraction for predicate tables throughout code (pretty much every occurance of "tuple")
 
 procedure findBestModelIteratively(struct) {
 	local structure = clone(struct);
@@ -136,9 +137,31 @@ procedure findBestModelIteratively(struct) {
 	end
 	// TODO: test if this makes things better or worse
 	generalizeModels(structure, maxModels, "Allotted");
+	local maximizedParticipants = getSmallestSetOfAtomsByQuery(maxModels, LowestNonFinalScoreParticipants);
+	if table.getn(maximizedParticipants) == 0 then
+		print("Your theory is insatisfiable!");
+		return;
+	end
+	local participant = getRandomElement(maximizedParticipants);
+	local modelAllottedCt = maxModels[1][getvocabulary(structure).Allotted].ct
+	local thing = nil;
+	for j, tuple in pairs(totable(modelAllottedCt)) do
+		if tuple[1] == participant then
+			thing = tuple[2];
+			break;
+		end
+	end
+	if thing == nil then
+		print("Something went wrong!");
+		return;
+	end
+	maketrue(structure[getvocabulary(structure).AllottedInit], { participant, thing });
+	maketrue(structure[getvocabulary(structure).AllottedInitFinal], { participant });
+	//TODO: test efficiency of above vs below methods
+	/*
 	local maximizedParticipants = intersect(maxModels, LowestNonFinalScoreParticipants);
 	if table.getn(maximizedParticipants) == 0 then
-		//TODO: somehow detect disjunct sets... This will not be easy
+		//TODO: call getSmallestSetOfAtomsByQuery here
 	else
 		local initPredicateInterpretation = structure[getvocabulary(structure).AllottedInit]
 		local initFinalPredicateInterpretation = structure[getvocabulary(structure).AllottedInitFinal]
@@ -158,6 +181,7 @@ procedure findBestModelIteratively(struct) {
 			maketrue(initFinalPredicateInterpretation, { participant });
 		end
 	end
+	*/
 	clean(structure);
 	return findBestModelIteratively(structure);
 }
