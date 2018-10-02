@@ -88,11 +88,11 @@ theory ThingDividerTheory : ThingDividerVoc {
 
 } //ThingDividerTheory
 
-term LowestNonFinalScore : ThingDividerVoc {
-	min{ p [Participant] s [Score] : FinalScore(p) = s & ~AllottedInitFinal(p) : s }
-} //LowestNonFinalScore
+term WorstNonFinalScoreInverted : ThingDividerVoc {
+	max{ p [Participant] s [Score] : FinalScore(p) = s & ~AllottedInitFinal(p) : -s }
+} //WorstNonFinalScoreInverted
 
-query LowestNonFinalScoreParticipants : ThingDividerVoc {
+query WorstNonFinalScoreParticipants : ThingDividerVoc {
 	{ p [Participant] : ~AllottedInitFinal(p) & FinalScore(p) = min{ pp [Participant] s [Score] : FinalScore(pp) = s & ~AllottedInitFinal(pp) : s } }
 }
 
@@ -111,13 +111,30 @@ structure ThingDividerExampleStruct : ThingDividerVoc {
 	AllottedInitFinal = { }
 } //ThingDividerExampleStruct
 
+structure ThingDividerTestStruct : ThingDividerVoc {
+	Participant = { P1 ; P2 ; P3 ; P4 ; P5 ; P6 ; P7 ; P8 ; P9 ; P10 }
+	Thing = { T1 ; T2 ; T3 ; T4 ; T5 }
+	Score = { 0..5 }
+	Mandatory = { }
+	MaxNbParticipants = { (T1, 4) ; (T2, 4) ; (T3, 4) ; (T4, 4) ; (T5, 4) }
+	MinNbParticipants = { }
+	Voted = { (P1, T1, 1) ; (P1, T5, 4) ; (P2, T3, 5) ; (P2, T4, 1) ; (P2, T5, 2) ; (P3, T1, 1) ; (P3, T2, 3) ; (P3, T5, 4) ; (P4, T1, 2) ; (P4, T3, 5) ; (P4, T5, 1) ; (P5, T5, 5) ; (P6, T3, 1) ; (P6, T4, 1) ; (P6, T5, 2) ; (P7, T1, 1) ; (P7, T2, 3) ; (P8, T4, 4) ; (P8, T5, 1) ; (P9, T1, 2) ; (P9, T2, 1) ; (P9, T3, 4) ; (P9, T4, 5) ; (P9, T5, 3) ; (P10, T2, 3) }
+	AllottedInit = { }
+	AllottedInitFinal = { }
+} //ThingDividerTestStruct
+
 
 procedure main() {
-	local bestModel = findBestModelIteratively(ThingDividerExampleStruct);
+	// return all models for minimize
+	stdoptions.nbmodels = 0;
+	local x = os.clock();
+	//local bestModel = findBestModelIteratively(ThingDividerExampleStruct);
+	local bestModel = findBestModelIteratively(ThingDividerTestStruct);
 	if bestModel == nil then
 		print("Your theory is insatisfiable!");
 		return;
 	end
+	print(x - os.clock());
 	print("best model");
 	print(bestModel);
 } //main()
@@ -127,17 +144,15 @@ procedure main() {
 procedure findBestModelIteratively(struct) {
 	local structure = clone(struct);
 	local theory = ThingDividerTheory;
-	local term = LowestNonFinalScore;
-	//TODO: using IDP's built-in maximize or minimize would be better, but it seems to only return 1 model
-	local maxModels, maxValue = maximizeModels(allmodels(theory, structure), term);
+	local term = WorstNonFinalScoreInverted;
+	local maxModels, maxValue = minimize(theory, structure, term);
 	if table.getn(maxModels) == 0 then
 		return nil;
 	elseif table.getn(maxModels) == 1 then
 		return maxModels[1];
 	end
-	// TODO: test if this makes things better or worse
 	generalizeModels(structure, maxModels, "Allotted");
-	local maximizedParticipants = getSmallestSetOfAtomsByQuery(maxModels, LowestNonFinalScoreParticipants);
+	local maximizedParticipants = getSmallestSetOfAtomsByQuery(maxModels, WorstNonFinalScoreParticipants);
 	if table.getn(maximizedParticipants) == 0 then
 		print("Your theory is insatisfiable!");
 		return;
@@ -157,31 +172,6 @@ procedure findBestModelIteratively(struct) {
 	end
 	maketrue(structure[getvocabulary(structure).AllottedInit], { participant, thing });
 	maketrue(structure[getvocabulary(structure).AllottedInitFinal], { participant });
-	//TODO: test efficiency of above vs below methods
-	/*
-	local maximizedParticipants = intersect(maxModels, LowestNonFinalScoreParticipants);
-	if table.getn(maximizedParticipants) == 0 then
-		//TODO: call getSmallestSetOfAtomsByQuery here
-	else
-		local initPredicateInterpretation = structure[getvocabulary(structure).AllottedInit]
-		local initFinalPredicateInterpretation = structure[getvocabulary(structure).AllottedInitFinal]
-		for i,participant in pairs(maximizedParticipants) do
-			local modelAllottedCt = maxModels[1][getvocabulary(structure).Allotted].ct
-			local thing = nil;
-			for j, tuple in pairs(totable(modelAllottedCt)) do
-				if tuple[1] == participant then
-					thing = tuple[2];
-					break;
-				end
-			end
-			if thing == nil then
-				print("Something went wrong!");
-			end
-			maketrue(initPredicateInterpretation, { participant, thing });
-			maketrue(initFinalPredicateInterpretation, { participant });
-		end
-	end
-	*/
 	clean(structure);
 	return findBestModelIteratively(structure);
 }
