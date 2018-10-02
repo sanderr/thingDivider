@@ -138,7 +138,7 @@ structure ThingDividerTestStruct : ThingDividerVoc {
 
 procedure main() {
 	// return all models for minimize
-	//TODO: 100 models is pretty restrictive, but it speeds things up greatly. Might it be enough?
+	//TODO: 100 models is pretty restrictive, but it speeds things up greatly for a large number of participants. Might it be enough? I believe it might result in a decent approximation. Maybe even a value smaller than 100 could be selected. Edit README to reflect the fact that it's only an approximation.
 	stdoptions.nbmodels = 100;
 	local x = os.clock();
 	//local bestModel = findBestModelIteratively(ThingDividerExampleStruct);
