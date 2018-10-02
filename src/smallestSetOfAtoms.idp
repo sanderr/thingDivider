@@ -22,6 +22,8 @@ theory AtomTheory : AtomVoc {
 
 	! s [Set] : ? a [Atom] : Disjunction(s, a) & SufficientSet(a).
 
+	! a [Atom] : SufficientSet(a) => ? s [Set] : Disjunction(s, a).
+
 }
 
 term SufficientSetSize : AtomVoc {
@@ -64,12 +66,14 @@ procedure getSmallestSetOfAtomsByQuery(models, qry) {
 		table.insert(setDom, setFromKey(key));
 	end
 	setDomain(atomStruct, "Set", setDom);
+	local disjPredicateInterp = atomStruct[getvocabulary(atomStruct).Disjunction];
 	for key,disj in pairs(disjunctions) do
 		for _,atom in pairs(disj) do
-			maketrue(atomStruct[getvocabulary(atomStruct).Disjunction], { setFromKey(key), atom });
+			maketrue(disjPredicateInterp, { setFromKey(key), atom });
 		end
 	end
-	local minModels = minimizeModels(allmodels(AtomTheory, atomStruct), SufficientSetSize);
+	makeFalse(disjPredicateInterp, disjPredicateInterp.pf);
+	local minModels = minimize(AtomTheory, atomStruct, SufficientSetSize);
 	local model = getRandomElement(minModels);
 	if model == nil then
 		return nil
@@ -91,3 +95,5 @@ procedure findSmallestSetForExampleStruct() {
 		printmodels(minModels);
 	end
 }
+
+// vim: set noexpandtab:
